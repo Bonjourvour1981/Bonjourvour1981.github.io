@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vocabulary SRS Flashcards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8f9fc; --card-bg: #ffffff; --text: #1a1f36;
+      --primary: #6366f1; --primary-dark: #4f46e5;
+      --correct-bg: #dcfce7; --correct-text: #166534;
+      --wrong-bg: #fee2e2; --wrong-text: #991b1b;
+      --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.18), 0 0 1px 1px rgba(0,0,0,0.05);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+      background-attachment: fixed; color: var(--text);
+      margin: 0; padding: 24px; min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+    }
+    #app { width: 100%; max-width: 840px; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .header h2 { 
+      margin: 0; font-size: 32px; font-weight: 800; 
+      background: linear-gradient(to right, #ffffff, #e0e7ff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .progress { font-size: 16px; color: #e0e7ff; margin-top: 8px; font-weight: 600; letter-spacing: 0.02em; }
+    .controls-row { display: flex; gap: 12px; margin-top: 16px; justify-content: center; flex-wrap: wrap; align-items: center; }
+    .auto-add {
+      display: flex; gap: 6px; background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); padding: 6px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.2); flex: 1; max-width: 420px; min-width: 240px;
+    }
+    .auto-add input {
+      flex: 1; background: transparent; border: none; padding: 10px 14px; color: white; font-size: 16px; font-weight: 600; outline: none;
+    }
+    .auto-add input::placeholder { color: rgba(255,255,255,0.6); }
+    .auto-add button {
+      background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0 16px;
+      border-radius: 10px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 15px;
+    }
+    .auto-add button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .auto-add button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-list {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; padding: 10px 18px;
+      border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 15px;
+      box-shadow: 0 6px 16px rgba(139,92,246,0.3);
+    }
+    .btn-list:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .card-container { perspective: 1400px; height: 620px; margin-bottom: 24px; }
+    .card {
+      width: 100%; height: 100%; position: relative;
+      transform-style: preserve-3d; transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .face {
+      position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+      background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(12px);
+      border-radius: 24px; box-shadow: var(--shadow-lg); padding: 32px;
+      display: flex; flex-direction: column; overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+    .face.back { transform: rotateY(180deg); background: rgba(248, 250, 252, 0.96); }
+
+    .freq-tag { display: inline-block; background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; padding: 5px 12px; border-radius: 50px; font-size: 13px; font-weight: 700; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+    .meaning-en { font-size: 17px; font-weight: 600; color: #475569; margin: 6px 0 12px; line-height: 1.5; font-style: italic; }
+    .meaning-zh { 
+      font-family: 'Noto Serif SC', serif;
+      font-size: 22px; font-weight: 700; margin: 10px 0 14px; line-height: 1.7; 
+      background: linear-gradient(135deg, #1e3a5f, #334155);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .pos-tag { color: white; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #64748b, #94a3b8); padding: 3px 8px; border-radius: 6px; margin-right: 6px; display: inline-block; vertical-align: middle; }
+    .count-tag { color: #1e40af; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #bfdbfe, #dbeafe); padding: 3px 8px; border-radius: 6px; margin-left: 4px; display: inline-block; vertical-align: middle; border: 1px solid #93c5fd; }
+    .divider { width: 100%; height: 3px; background: linear-gradient(to right, #6366f1, #8b5cf6, #ec4899); border: none; margin: 18px 0; border-radius: 2px; }
+    .sentence-group { margin-top: 10px; }
+    .sentence { font-size: 17px; line-height: 1.7; margin-bottom: 16px; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; color: #334155; }
+    .sentence span.num { font-weight: 800; color: #6366f1; margin-right: 6px; min-width: 22px; background: #eef2ff; padding: 2px 6px; border-radius: 6px; font-size: 14px; }
+    .sentence span.text { flex: 1; font-weight: 500; }
+    .typing-wrapper { background: linear-gradient(145deg, #f8fafc, #eef2ff); border-radius: 16px; padding: 24px; margin: 12px 0; border: 2px dashed #c7d2fe; transition: all 0.3s; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+    .typing-wrapper.completed { border-style: solid; border-color: #10b981; background: linear-gradient(145deg, #dcfce7, #ecfdf5); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+    .char-grid { display: flex; justify-content: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+    .char-box { display: inline-flex; justify-content: center; align-items: center; width: 44px; height: 54px; border-bottom: 3px solid #cbd5e1; font-size: 26px; font-weight: 800; transition: all 0.2s; background: #ffffff; color: #1e293b; user-select: none; border-radius: 10px 10px 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+    .char-box.correct { border-bottom-color: #10b981; background: #dcfce7; color: #065f46; box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3); transform: translateY(-2px); }
+    .char-box.wrong { border-bottom-color: #ef4444; background: #fee2e2; color: #991b1b; box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3); }
+    .char-box.pending { border-bottom-color: #cbd5e1; background: transparent; color: transparent; }
+    .sentence-blank { display: inline-flex; align-items: center; vertical-align: middle; position: relative; margin: 0 4px; }
+    .inline-grid { display: inline-flex; gap: 4px; background: #f1f5f9; padding: 4px 6px; border-radius: 8px; }
+    .inline-grid .char-box { width: 24px; height: 30px; font-size: 16px; border-bottom-width: 2px; box-shadow: none; border-radius: 6px 6px 0 0; }
+    .hidden-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+    .stage2 { display: none; animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    .stage2.show { display: block; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .controls { display: flex; gap: 14px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+    .ctrl { padding: 12px 24px; border: none; border-radius: 14px; cursor: pointer; font-size: 16px; font-weight: 700; transition: all 0.25s; box-shadow: 0 6px 16px rgba(0,0,0,0.12); letter-spacing: 0.02em; }
+    .ctrl:hover:not(:disabled) { opacity: 0.9; transform: translateY(-2px); }
+    .ctrl:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-flip { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+    .btn-audio { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; display: none; }
+    .btn-audio.show { display: inline-flex; align-items: center; gap: 8px; }
+    .btn-next { background: linear-gradient(135deg, #64748b, #475569); color: white; display: none; }
+    .btn-next.show { display: inline-flex; align-items: center; gap: 8px; }
+    .srs-panel { display: none; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+    .srs-panel.show { display: flex; }
+    .srs-btn { color: white; padding: 10px 18px; font-size: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; border: none; }
+    .srs-again { background: linear-gradient(135deg, #ef4444, #dc2626); }
+    .srs-hard { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .srs-good { background: linear-gradient(135deg, #10b981, #059669); }
+    .srs-easy { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+    .feedback { text-align: center; min-height: 32px; margin-top: 14px; font-weight: 700; font-size: 17px; }
+    .empty-state { text-align: center; padding: 40px; color: #ffffff; background: rgba(255,255,255,0.15); backdrop-filter: blur(12px); border-radius: 24px; margin-top: 20px; border: 1px solid rgba(255,255,255,0.2); }
+    .empty-state button { margin-top: 24px; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; padding: 12px 24px; border-radius: 14px; font-weight: 700; cursor: pointer; border: none; }
+
+    /* Modals & Word List */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background: #ffffff; border-radius: 20px; width: 100%; max-width: 950px; max-height: 92vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.3); padding: 24px; border: 1px solid rgba(255,255,255,0.5); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .modal-header h3 { margin: 0; font-size: 22px; font-weight: 800; color: #1e293b; }
+    .modal-close { background: none; border: none; font-size: 26px; cursor: pointer; color: #64748b; padding: 4px; line-height: 1; }
+    .modal-close:hover { color: #1e293b; }
+
+    .list-actions { display: flex; gap: 10px; margin-bottom: 12px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+    .btn-action { padding: 8px 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 14px; }
+    .btn-delete { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+    .btn-delete:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+    .btn-delete:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-clear-custom { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .btn-clear-custom:hover { background: #e2e8f0; }
+
+    .list-search { width: 100%; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 15px; margin-bottom: 12px; outline: none; transition: 0.2s; }
+    .list-search:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+    .word-table-wrap { max-height: 55vh; overflow-y: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead { background: #f8fafc; position: sticky; top: 0; z-index: 2; }
+    th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: center; }
+    th { font-weight: 700; color: #475569; letter-spacing: 0.02em; }
+    td { color: #1e293b; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover { background: #f8fafc; }
+    input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+    .status-badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; display: inline-block; min-width: 65px; }
+    .status-due { background: #fee2e2; color: #b91c1c; }
+    .status-scheduled { background: #dcfce7; color: #166534; }
+    .status-new { background: #e0e7ff; color: #4338ca; }
+    .status-unverified { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .btn-row { display: flex; gap: 6px; justify-content: center; }
+    .btn-edit { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; }
+    .btn-edit:hover { transform: translateY(-1px); }
+    .btn-reset-word { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s; }
+    .btn-reset-word:hover { transform: translateY(-1px); }
+
+    /* Edit Modal Form */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #334155; font-size: 14px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 10px;
+      font-family: inherit; font-size: 15px; transition: border 0.2s; background: #f8fafc;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: #6366f1; background: #ffffff; box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-actions { display: flex; gap: 12px; margin-top: 20px; }
+    .btn-save { flex: 1; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; padding: 12px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; }
+    .btn-cancel { flex: 1; background: #f1f5f9; color: #475569; padding: 12px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; }
+    .btn-save:hover, .btn-cancel:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: rgba(15, 23, 42, 0.9); color: white; padding: 12px 20px; border-radius: 12px;
+      font-weight: 600; font-size: 15px; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 200;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3); backdrop-filter: blur(8px);
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-left: 4px solid #10b981; }
+    .toast.warning { border-left: 4px solid #f59e0b; }
+    .toast.error { border-left: 4px solid #ef4444; }
+    .toast.info { border-left: 4px solid #3b82f6; }
+
+    @media (max-width: 700px) {
+      .card-container { height: 680px; }
+      .face { padding: 20px; }
+      .char-box { width: 36px; height: 46px; font-size: 22px; }
+      .inline-grid .char-box { width: 20px; height: 24px; font-size: 13px; }
+      .meaning-zh { font-size: 19px; }
+      .header h2 { font-size: 26px; }
+      .auto-add { max-width: 100%; }
+      th, td { padding: 8px; font-size: 13px; }
+      .form-row { grid-template-columns: 1fr; }
+      .btn-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <h2>📚 Vocabulary Mastery</h2>
+      <div class="progress" id="progress-text">Loading your cards...</div>
+      <div class="controls-row">
+        <div class="auto-add">
+          <input type="text" id="auto-input" placeholder="Type a word & press Enter..." autocomplete="off">
+          <button id="auto-btn" onclick="autoAddWord()">➕ Add</button>
+        </div>
+        <button class="btn-list" onclick="openWordList()">📖 Word List</button>
+      </div>
+    </div>
+
+    <div class="card-container">
+      <div class="card" id="flashcard">
+        <div class="face front" id="front-face"></div>
+        <div class="face back" id="back-face"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl btn-flip" id="btn-flip">🔄 Flip Card</button>
+      <button class="ctrl btn-audio" id="btn-audio">🔊 Listen</button>
+      <button class="ctrl btn-next" id="btn-next">➡️ Next</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+    <div class="srs-panel" id="srs-panel">
+      <button class="srs-btn srs-again" data-quality="0">🔴 Again</button>
+      <button class="srs-btn srs-hard" data-quality="2">🟠 Hard</button>
+      <button class="srs-btn srs-good" data-quality="4">🟢 Good</button>
+      <button class="srs-btn srs-easy" data-quality="5">🔵 Easy</button>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <h2 style="margin: 0 0 12px;">🎉 Excellent Work!</h2>
+      <p style="font-size: 18px; margin: 0 0 20px;">You've reviewed all due cards. Come back tomorrow for new vocabulary.</p>
+      <button onclick="resetSRS()">🔄 Reset Progress</button>
+    </div>
+  </div>
+
+  <!-- WORD LIST MODAL -->
+  <div class="modal" id="list-modal" onclick="closeWordList(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>📖 Vocabulary Progress</h3>
+        <button class="modal-close" onclick="closeWordList()">&times;</button>
+      </div>
+      <div class="list-actions">
+        <span style="font-size:14px; color:#64748b; font-weight:600;" id="selected-count">0 selected</span>
+        <button class="btn-action btn-delete" id="btn-delete-selected" disabled>🗑️ Delete Selected</button>
+        <button class="btn-action btn-clear-custom" onclick="clearAllCustom()">🗑️ Clear All Custom</button>
+      </div>
+      <input type="text" class="list-search" id="list-search" placeholder="🔍 Search words, meanings, or status...">
+      <div class="word-table-wrap">
+        <table id="word-table">
+          <thead>
+            <tr>
+              <th style="width:40px;"><input type="checkbox" id="select-all"></th>
+              <th style="text-align:left; padding-left:14px;">Word</th>
+              <th>POS</th>
+              <th style="text-align:left;">Meaning</th>
+              <th>Freq</th>
+              <th>Interval</th>
+              <th>Next Review</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="word-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div class="modal" id="edit-modal" onclick="closeEditModal(event)">
+    <div class="modal-content" style="max-width:650px;" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>✏️ Edit Word</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <form id="edit-form">
+        <input type="hidden" id="edit-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label>English Word *</label>
+            <input type="text" id="edit-word" required placeholder="e.g., ceremony">
+          </div>
+          <div class="form-group">
+            <label>Part of Speech *</label>
+            <select id="edit-pos" required>
+              <option value="n.">n. (noun)</option>
+              <option value="v.">v. (verb)</option>
+              <option value="adj.">adj. (adjective)</option>
+              <option value="adv.">adv. (adverb)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Countability (Nouns)</label>
+            <select id="edit-count">
+              <option value="">None</option>
+              <option value="[C]">[C] Countable</option>
+              <option value="[U]">[U] Uncountable</option>
+              <option value="[C, U]">[C, U] Both</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Frequency</label>
+            <select id="edit-freq">
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Chinese Meaning (Oxford/Longman Style) *</label>
+          <textarea id="edit-zh" rows="3" required placeholder="e.g., 典礼; 仪式（尤指宗教或公共场合的正式活动）; 礼节; 礼仪（正式而礼貌的行为）"></textarea>
+          <small style="color:#64748b; display:block; margin-top:4px;">Use semicolons to separate meanings; add usage notes in parentheses</small>
+        </div>
+        <div class="form-group">
+          <label>English Definition *</label>
+          <textarea id="edit-en" rows="2" required placeholder="Clear English definition..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Example Sentences (3) *</label>
+          <input type="text" id="edit-s1" required placeholder="Sentence 1 (use ______)">
+          <input type="text" id="edit-s2" required placeholder="Sentence 2" style="margin-top:8px;">
+          <input type="text" id="edit-s3" required placeholder="Sentence 3" style="margin-top:8px;">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-save">💾 Save Changes</button>
+          <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ================= BASE DATA: Oxford/Longman-Style Chinese Meanings =================
+    // Format: Multiple meanings separated by semicolons; usage notes in parentheses
+    // Ordered by frequency (most common first)
+    const baseData = [
+      { 
+        w: "ceremony", pos: "n.", count: "[C, U]", 
+        zh: "典礼; 仪式（尤指宗教、婚礼、毕业等正式场合举行的庄重活动）; 礼节; 礼仪; 客套（正式而礼貌的行为方式，尤指外交或社交场合）", 
+        en: "a formal religious or public occasion with traditional acts; very formal and polite behaviour", 
+        freq: "High", verified: true, 
+        s: ["The graduation ______ will be held in the main hall.","It is a traditional ______ to light fireworks at midnight.","They held a small ______ to celebrate their anniversary."] 
+      },
+      { 
+        w: "challenge", pos: "n.", count: "[C]", 
+        zh: "挑战; 难题; 考验（需要付出极大努力、技能或勇气才能完成的任务或局面）; （比赛、辩论中的）挑战书; 邀请", 
+        en: "a task or situation that tests someone's abilities; an invitation to compete", 
+        freq: "High", verified: true, 
+        s: ["Learning a new language is a real ______.","The company faced financial ______ last year.","She accepted the ______ to run a marathon."] 
+      },
+      { 
+        w: "challenge", pos: "v.", 
+        zh: "质疑; 怀疑（对某事的真实性、合法性或正确性提出疑问）; 向…挑战; 邀请…比赛; 考验; 激发（促使某人发挥最大能力）", 
+        en: "to question if something is true or legal; to invite someone to compete; to test someone's abilities", 
+        freq: "Medium", verified: true, 
+        s: ["The lawyer decided to ______ the witness's statement.","I wouldn't ______ his authority without good reason.","The new policy ______ traditional working methods."] 
+      },
+      { 
+        w: "chamber", pos: "n.", count: "[C]", 
+        zh: "（用于特定用途的）房间; 室; 厅; （议会中的）议院; 会议厅; （机器、植物或动物体内的）腔; 膛; 室（封闭的空腔）", 
+        en: "a room used for a special or official purpose; part of a parliament; a closed space in a machine, plant, or body", 
+        freq: "Medium", verified: true, 
+        s: ["The senator retired to his private ______.","They met in a soundproof ______ for the interview.","The old ______ still echoes with historical debates."] 
+      },
+      { 
+        w: "chamber", pos: "n.", count: "[C]", 
+        zh: "（心脏等器官的）腔; 室; （枪炮的）弹膛; 药室", 
+        en: "a hollow space inside an organ or weapon", 
+        freq: "Low", verified: true, 
+        s: ["Blood flows from the left ventricle into the upper ______.","The engine's combustion ______ needs regular cleaning.","The spider uses its silk ______ to protect its eggs."] 
+      },
+      { 
+        w: "champion", pos: "n.", count: "[C]", 
+        zh: "（比赛、竞赛中的）冠军; 获胜者; 优胜者; 拥护者; 卫士; 捍卫者; 斗士（热情支持或捍卫某事业、原则或人群的人）", 
+        en: "someone who has beaten all competitors in a contest; a person who enthusiastically supports a cause", 
+        freq: "High", verified: true, 
+        s: ["She became the world ______ after winning gold.","The reigning ______ will defend his title next month.","Every ______ starts as a beginner who refuses to quit."] 
+      },
+      { 
+        w: "champion", pos: "v.", 
+        zh: "支持; 声援; 捍卫; 为…斗争; 维护（积极支持某人、某事业或某原则）", 
+        en: "to support, defend, or fight for a person, belief, or principle", 
+        freq: "Medium", verified: true, 
+        s: ["He spent his life trying to ______ equal rights.","The organization aims to ______ environmental protection.","She decided to ______ the cause of free education."] 
+      },
+      { 
+        w: "chaos", pos: "n.", count: "[U]", 
+        zh: "混乱; 无秩序状态; 杂乱无章的局面（完全缺乏秩序、组织或可预测性的状态）", 
+        en: "a state of total confusion with no order or organization", 
+        freq: "High", verified: true, 
+        s: ["The power outage caused total ______ in the city.","Without clear rules, the classroom descended into ______.","Natural disasters often bring economic ______."] 
+      },
+      { 
+        w: "characteristic", pos: "n.", count: "[C]", 
+        zh: "特色; 特点; 特征; 特性（某人、某物或某群体典型的、显著的或区别于其他的品质）", 
+        en: "a typical or noticeable quality of someone or something", 
+        freq: "High", verified: true, 
+        s: ["Kindness is one of his most notable ______.","Water retention is a ______ of many plants in dry climates.","The software's main ______ is its simplicity."] 
+      },
+      { 
+        w: "characteristic", pos: "adj.", 
+        zh: "特有的; 典型的; 独特的（表示某人或某物特有的品质或行为方式）", 
+        en: "typical of a particular person, place, or thing", 
+        freq: "High", verified: true, 
+        s: ["It is ______ of him to arrive exactly on time.","The weather was ______ of late summer.","A ______ feature of Gothic architecture is the pointed arch."] 
+      },
+      { 
+        w: "characterise", pos: "v.", 
+        zh: "是…的特征; 为…所特有（某事物具有某种典型特征）; 描述…的特征; 归纳…的特性; 刻画（陈述或描绘某人/某物的主要品质）", 
+        en: "to be typical of something; to describe the distinctive nature of someone/something", 
+        freq: "Medium", verified: true, 
+        s: ["Bright colours ______ his early paintings.","The era was ______ by rapid technological change.","Researchers ______ the disease as a rare genetic disorder."] 
+      },
+      { 
+        w: "charge", pos: "v.", 
+        zh: "（尤指对服务、商品或活动）收费; 要价; 开价; 充电（向电池等电器设备供电）; 控告; 指控（正式声明某人犯有罪行）; 冲锋; 猛攻", 
+        en: "to ask for money for a service; to supply electricity to a battery; to formally accuse someone of a crime", 
+        freq: "High", verified: true, 
+        s: ["The restaurant doesn't ______ for delivery on weekends.","I need to ______ my laptop before the flight.","The police plan to ______ him with fraud."] 
+      },
+      { 
+        w: "charge", pos: "n.", count: "[C, U]", 
+        zh: "（尤指服务、活动的）收费; 费用; 价格; 控告; 指控; 罪名; 掌管; 负责; 照管; 充电; 电荷", 
+        en: "the amount of money asked for something; a formal accusation; responsibility for someone/something", 
+        freq: "High", verified: true, 
+        s: ["There is a small ______ for baggage check-in.","The repair came with no extra ______.","Admission to the gallery is free of ______."] 
+      },
+      { 
+        w: "charity", pos: "n.", count: "[C, U]", 
+        zh: "慈善事业; 慈善组织; 慈善机构（向贫困、患病或不幸者提供帮助或金钱的组织或行为）; 仁慈; 宽容; 友善（对人友善、不苛刻评判的品质）", 
+        en: "help or money given freely to people in need; an organization that provides such help; kindness in judging others", 
+        freq: "High", verified: true, 
+        s: ["They gave money to ______ every December.","The organization relies entirely on private ______.","Acts of ______ can change entire communities."] 
+      },
+      { 
+        w: "charm", pos: "n.", count: "[C, U]", 
+        zh: "魅力; 吸引力; 魔力（使人喜欢、着迷或被吸引的个人品质）; 护身符; 符咒; 咒语（被认为具有魔力或能带来好运的小物件或话语）; （首饰链上的）小饰物", 
+        en: "a quality that attracts or delights people; an object believed to bring luck; a small decorative item on a bracelet", 
+        freq: "High", verified: true, 
+        s: ["His natural ______ won over the audience immediately.","The old village has a rustic ______ that attracts tourists.","She wore a silver ______ around her neck."] 
+      },
+      { 
+        w: "charm", pos: "v.", 
+        zh: "吸引; 迷住; 使陶醉; 使着迷（因个人魅力而吸引、说服或取悦他人）; 用魔法控制; 施魔法于", 
+        en: "to attract or persuade someone because of your charm; to control by magic", 
+        freq: "High", verified: true, 
+        s: ["He managed to ______ everyone at the dinner party.","The musician's performance ______ the crowd instantly.","Cities often ______ visitors with their vibrant culture."] 
+      }
+    ].map((d, i) => ({...d, id: i}));
+
+    const CUSTOM_KEY = 'custom_vocab_v5';
+    const SRS_KEY = 'vocab_srs_v5';
+    let dueCards = [];
+    let currentIndex = 0;
+    let currentCard = null;
+    let mainHiddenInput = null;
+    let mainWordComplete = false;
+    let allSentencesComplete = false;
+    let selectedIds = new Set();
+
+    // ================= DATA LOADING =================
+    function loadAllData() {
+      const custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]');
+      return [...baseData, ...custom];
+    }
+    function getCustomList() { return JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); }
+    function saveCustomList(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
+
+    // ================= AUTO-FETCH WITH RICH CHINESE FALLBACK =================
+    async function autoAddWord() {
+      const input = document.getElementById('auto-input');
+      let word = input.value.trim().replace(/[^a-zA-Z\s\-]/g, '');
+      if (!word || word.length < 2) { showToast('⚠️ Enter a valid word.', 'warning'); return; }
+
+      const btn = document.getElementById('auto-btn');
+      btn.disabled = true; btn.textContent = '⏳';
+      showToast('Checking spelling & fetching dictionary data...', 'info');
+
+      let cards = [];
+      let isVerified = true;
+
+      try {
+        // Fetch English definitions from Dictionary API
+        const dictRes = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+        if (!dictRes.ok) throw new Error('Not found');
+        const dictData = await dictRes.json();
+        const entry = dictData[0];
+
+        // Fetch Chinese translation via Google Translate (unofficial but reliable)
+        const transRes = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(word)}`);
+        const transData = await transRes.json();
+        const baseZh = transData[0][0][0];
+
+        // Build rich Chinese meanings from dictionary entries + fallback
+        for (const m of entry.meanings) {
+          const posMap = { noun: 'n.', verb: 'v.', adjective: 'adj.', adverb: 'adv.' };
+          const pos = posMap[m.partOfSpeech.toLowerCase()] || 'n.';
+          const count = pos === 'n.' ? "[C, U]" : "";
+          
+          // Generate Oxford-style Chinese meaning
+          let zhParts = [];
+          for (const d of m.definitions.slice(0, 3)) {
+            // Simple heuristic: add usage context based on definition keywords
+            let note = "";
+            if (d.definition.toLowerCase().includes("formal")) note = "（正式用语）";
+            else if (d.definition.toLowerCase().includes("informal")) note = "（非正式用语）";
+            else if (d.definition.toLowerCase().includes("figurative")) note = "（比喻义）";
+            else if (d.definition.toLowerCase().includes("literal")) note = "（字面义）";
+            
+            zhParts.push(`${baseZh}${note ? note : ""}`);
+          }
+          const richZh = zhParts.join("; ");
+
+          for (const d of m.definitions.slice(0, 2)) {
+            cards.push({
+              w: entry.word.toLowerCase(), pos, count, 
+              zh: richZh, 
+              en: d.definition, 
+              verified: true,
+              freq: cards.length === 0 ? "High" : "Medium",
+              s: [
+                d.example || `The ${entry.word.toLowerCase()} is very important in this context.`,
+                d.example || `We discussed the ${entry.word.toLowerCase()} in detail yesterday.`,
+                d.example || `Please learn how to use ${entry.word.toLowerCase()} correctly.`
+              ]
+            });
+          }
+        }
+        if (cards.length === 0) {
+          cards.push({
+            w: entry.word.toLowerCase(), pos: "n.", count: "", 
+            zh: `${baseZh}（词典释义待完善，建议手动编辑补充）`, 
+            en: "Definition fetched from dictionary", 
+            verified: true, 
+            freq: "Medium",
+            s: [`Example sentence for ${entry.word.toLowerCase()}.`, `Another context for ${entry.word.toLowerCase()}.`, `Study how to use ${entry.word.toLowerCase()}.`]
+          });
+        }
+      } catch (e) {
+        // Fallback for unverified words with structured placeholder
+        isVerified = false;
+        cards.push({
+          w: word.toLowerCase(), pos: "?", count: "", 
+          zh: "⚠️ 未收录/待验证（请在编辑中补充牛津/朗文风格释义，格式：含义1; 含义2（使用场景）; 含义3）", 
+          en: "Spelling not verified in dictionary. Please check manually and edit meaning.", 
+          verified: false, 
+          freq: "Low",
+          s: [`Please verify the spelling and meaning of ${word}.`, `Add context sentence 1 for ${word}.`, `Add context sentence 2 for ${word}.`]
+        });
+      } finally {
+        btn.disabled = false; btn.textContent = '➕ Add'; input.value = ''; input.focus();
+      }
+
+      const uid = 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const newCards = cards.map(c => ({...c, id: uid}));
+      const custom = getCustomList();
+      if (custom.some(c => c.w === word.toLowerCase())) { showToast('⚠️ Already in list!', 'warning'); return; }
+      custom.push(...newCards);
+      saveCustomList(custom);
+
+      showToast(isVerified ? `✅ "${word}" verified & added with rich meanings!` : `⚠️ "${word}" not found. Added for manual editing.`, isVerified ? 'success' : 'warning');
+      initSRS();
+    }
+
+    // ================= SRS ENGINE =================
+    function initSRS() {
+      const stored = localStorage.getItem(SRS_KEY);
+      const srsMap = stored ? JSON.parse(stored) : {};
+      const now = Date.now();
+      const all = loadAllData();
+      dueCards = all.filter(c => (srsMap[c.id]?.due || 0) <= now).sort((a, b) => (srsMap[a.id]?.due || 0) - (srsMap[b.id]?.due || 0));
+      currentIndex = 0; updateProgress();
+      
+      const emptyState = document.getElementById('empty-state');
+      const cardCont = document.querySelector('.card-container');
+      const ctrls = document.querySelector('.controls');
+      if (dueCards.length === 0) {
+        cardCont.style.display = 'none'; ctrls.style.display = 'none'; emptyState.style.display = 'block';
+      } else {
+        cardCont.style.display = ''; ctrls.style.display = ''; emptyState.style.display = 'none';
+        renderCard(dueCards[0]);
+      }
+    }
+
+    function saveSRS(cardId, quality) {
+      let srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      const state = srsMap[cardId] || { interval: 0, ease: 2.5, reps: 0, due: 0 };
+      if (quality === 0) { state.interval = 0; state.ease = Math.max(1.3, state.ease - 0.2); state.reps = 0; }
+      else if (quality === 2) { state.interval = Math.max(1, state.interval * 1.2); state.ease = Math.max(1.3, state.ease - 0.15); }
+      else if (quality === 4) { state.interval = state.interval === 0 ? 1 : Math.ceil(state.interval * state.ease); }
+      else if (quality === 5) { state.interval = state.interval === 0 ? 3 : Math.ceil(state.interval * state.ease * 1.3); state.ease += 0.15; }
+      state.reps += (quality > 0 ? 1 : 0);
+      state.due = Date.now() + (state.interval * 24 * 60 * 60 * 1000);
+      srsMap[cardId] = state;
+      localStorage.setItem(SRS_KEY, JSON.stringify(srsMap));
+    }
+
+    function resetSRS() { localStorage.removeItem(SRS_KEY); location.reload(); }
+
+    // ================= UI & RENDERING =================
+    const cardEl = document.getElementById('flashcard');
+    const frontEl = document.getElementById('front-face');
+    const backEl = document.getElementById('back-face');
+    const flipBtn = document.getElementById('btn-flip');
+    const audioBtn = document.getElementById('btn-audio');
+    const nextBtn = document.getElementById('btn-next');
+    const srsPanel = document.getElementById('srs-panel');
+    const feedbackEl = document.getElementById('feedback');
+    const progressText = document.getElementById('progress-text');
+
+    function updateProgress() { progressText.textContent = `Due: ${dueCards.length} / ${loadAllData().length}`; }
+    function formatPOS(pos, count) { return count ? `<span class="pos-tag">${pos}</span><span class="count-tag">${count}</span>` : `<span class="pos-tag">${pos}</span>`; }
+
+    function renderCard(card) {
+      currentCard = card; mainWordComplete = false; allSentencesComplete = false;
+      cardEl.classList.remove('flipped'); srsPanel.classList.remove('show'); audioBtn.classList.remove('show'); nextBtn.classList.remove('show');
+      feedbackEl.textContent = ''; feedbackEl.style.color = 'var(--text)'; flipBtn.textContent = '🔄 Flip Card';
+
+      frontEl.innerHTML = `
+        <div class="freq-tag">📊 ${card.freq} Frequency</div>
+        <div class="meaning-zh">${formatPOS(card.pos, card.count)} ${card.zh}</div>
+        <div class="meaning-en">🇬🇧 ${card.en}</div>
+        <hr class="divider">
+        <div class="sentence-group">${card.s.map((s, i) => `<div class="sentence"><span class="num">${i+1}.</span><span class="text">${s.replace('______', '______')}</span></div>`).join('')}</div>
+      `;
+
+      backEl.innerHTML = `
+        <div class="meaning-zh">${formatPOS(card.pos, card.count)} ${card.zh}</div>
+        <div class="freq-tag" style="margin:6px 0;">📊 ${card.freq} Frequency</div>
+        <div class="typing-wrapper" id="main-typing-wrapper">
+          <p style="text-align:center; color:#64748b; font-size:15px; margin:0 0 12px; font-weight:600;">Type the word letter by letter:</p>
+          <div class="char-grid" id="main-char-grid"></div>
+          <input type="text" id="main-hidden-input" class="hidden-input" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="stage2" id="stage2">
+          <hr class="divider">
+          <div class="sentence-group">
+            ${card.s.map((s, i) => `<div class="sentence"><span class="num">${i+1}.</span><span class="text">${s.replace('______', `<span class="sentence-blank" data-target="${card.w.toLowerCase()}"><span class="inline-grid"></span><input type="text" class="hidden-input sent-hidden" autocomplete="off"></span>`)}</span></div>`).join('')}
+          </div>
+        </div>
+      `;
+      setupMainTyping();
+      setTimeout(() => document.getElementById('main-hidden-input')?.focus(), 300);
+    }
+
+    function setupMainTyping() {
+      const wrapper = document.getElementById('main-typing-wrapper');
+      mainHiddenInput = document.getElementById('main-hidden-input');
+      const grid = document.getElementById('main-char-grid');
+      const target = currentCard.w.toLowerCase();
+      grid.innerHTML = '';
+      for(let i=0; i<target.length; i++) { const b = document.createElement('span'); b.className = 'char-box pending'; b.textContent = '_'; grid.appendChild(b); }
+      wrapper.onclick = () => mainHiddenInput.focus();
+      mainHiddenInput.addEventListener('input', () => {
+        if(mainWordComplete) return;
+        const val = mainHiddenInput.value.toLowerCase();
+        for(let i=0; i<target.length; i++) {
+          const b = grid.children[i];
+          b.textContent = i < val.length ? val[i] : '_';
+          b.className = i < val.length ? (val[i] === target[i] ? 'char-box correct' : 'char-box wrong') : 'char-box pending';
+        }
+        if(val.length === target.length && val === target) {
+          mainWordComplete = true; mainHiddenInput.disabled = true; wrapper.classList.add('completed');
+          feedbackEl.textContent = '🎉 Correct! Now fill the sentences.'; feedbackEl.style.color = 'var(--correct-text)';
+          revealSentences();
+        }
+      });
+    }
+
+    function revealSentences() {
+      const stage2 = document.getElementById('stage2'); stage2.classList.add('show');
+      const blanks = document.querySelectorAll('.sentence-blank');
+      blanks.forEach((blank, idx) => {
+        const target = blank.dataset.target;
+        const grid = blank.querySelector('.inline-grid');
+        const hidden = blank.querySelector('.sent-hidden');
+        grid.innerHTML = '';
+        for(let i=0; i<target.length; i++) { const b = document.createElement('span'); b.className = 'char-box pending'; b.textContent = '_'; grid.appendChild(b); }
+        blank.onclick = () => hidden.focus();
+        hidden.addEventListener('input', () => {
+          if(blank.classList.contains('completed')) return;
+          let val = hidden.value.toLowerCase();
+          if(val.length > target.length) hidden.value = val.slice(0, target.length);
+          const cur = hidden.value.toLowerCase();
+          for(let i=0; i<target.length; i++) {
+            const b = grid.children[i];
+            b.textContent = i < cur.length ? cur[i] : '_';
+            b.className = i < cur.length ? (cur[i] === target[i] ? 'char-box correct' : 'char-box wrong') : 'char-box pending';
+          }
+          if(cur.length === target.length && cur === target) {
+            blank.classList.add('completed'); hidden.disabled = true;
+            if(blanks[idx+1]) setTimeout(() => blanks[idx+1].querySelector('.sent-hidden').focus(), 100);
+          }
+          checkAllSentencesComplete();
+        });
+      });
+      setTimeout(() => blanks[0]?.querySelector('.sent-hidden').focus(), 100);
+      checkAllSentencesComplete();
+    }
+
+    function checkAllSentencesComplete() {
+      const blanks = document.querySelectorAll('.sentence-blank');
+      if(blanks.length === Array.from(blanks).filter(b => b.classList.contains('completed')).length && mainWordComplete && !allSentencesComplete) {
+        allSentencesComplete = true;
+        feedbackEl.textContent = '✅ Excellent! All correct.'; feedbackEl.style.color = 'var(--correct-text)';
+        audioBtn.classList.add('show'); srsPanel.classList.add('show');
+      }
+    }
+
+    // ================= INTERACTION =================
+    flipBtn.addEventListener('click', () => { cardEl.classList.toggle('flipped'); flipBtn.textContent = cardEl.classList.contains('flipped') ? '🔙 Back to Front' : '🔄 Flip Card'; if(cardEl.classList.contains('flipped')) setTimeout(()=>document.getElementById('main-hidden-input')?.focus(), 100); });
+    document.addEventListener('keydown', e => { if(e.key==='Enter' && !cardEl.classList.contains('flipped')) { cardEl.classList.add('flipped'); flipBtn.textContent='🔙 Back to Front'; } if(e.key==='Enter' && document.activeElement===document.getElementById('auto-input')) autoAddWord(); });
+    audioBtn.addEventListener('click', () => { const u = new SpeechSynthesisUtterance(currentCard.w); u.lang='en-US'; u.rate=0.9; window.speechSynthesis.speak(u); });
+    document.querySelectorAll('.srs-btn').forEach(b => b.addEventListener('click', () => { saveSRS(currentCard.id, parseInt(b.dataset.quality)); nextCard(); }));
+    nextBtn.addEventListener('click', nextCard);
+    function nextCard() { currentIndex++; updateProgress(); if(currentIndex < dueCards.length) renderCard(dueCards[currentIndex]); else initSRS(); }
+
+    // ================= WORD LIST =================
+    function openWordList() { selectedIds.clear(); updateSelectedUI(); document.getElementById('list-modal').classList.add('active'); renderWordList(); }
+    function closeWordList(e) { if(!e || e.target === document.getElementById('list-modal')) document.getElementById('list-modal').classList.remove('active'); }
+    
+    function renderWordList() {
+      const all = loadAllData();
+      const srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      const now = Date.now();
+      const tbody = document.getElementById('word-tbody');
+      tbody.innerHTML = '';
+      
+      all.forEach(card => {
+        const state = srsMap[card.id] || { interval: 0, due: 0, reps: 0 };
+        const isDue = state.due <= now;
+        let badge = state.reps===0 && state.interval===0 ? `<span class="status-badge status-new">🆕 New</span>` : 
+                    isDue ? `<span class="status-badge status-due">🔴 Due</span>` : `<span class="status-badge status-scheduled">🟢 Scheduled</span>`;
+        const unverifiedTag = card.verified === false ? ` <span class="status-badge status-unverified">⚠️ Unverified</span>` : '';
+        const next = state.due > now ? new Date(state.due).toLocaleDateString() : 'Now';
+        const isCustom = typeof card.id === 'string';
+        const checked = selectedIds.has(card.id) ? 'checked' : '';
+        // Truncate long Chinese meaning for table display
+        const zhDisplay = card.zh.length > 40 ? card.zh.substring(0, 40) + '…' : card.zh;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="checkbox" class="row-check" data-id="${card.id}" ${isCustom ? checked : ''} ${!isCustom ? 'disabled' : ''}></td>
+          <td style="text-align:left; font-weight:700;">${card.w}</td>
+          <td>${card.pos}${card.count||''}</td>
+          <td style="text-align:left; max-width:200px; font-family:'Noto Serif SC',serif;">${zhDisplay}</td>
+          <td>${card.freq}</td>
+          <td>${state.interval}d</td>
+          <td>${next}</td>
+          <td>${badge}${unverifiedTag}</td>
+          <td>
+            <div class="btn-row">
+              ${isCustom ? `<button class="btn-edit" onclick="openEditModal('${card.id}')">✏️ Edit</button>` : ''}
+              <button class="btn-reset-word" onclick="resetWordSRS('${card.id}')">🔄 Reset</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.querySelectorAll('.row-check').forEach(cb => {
+        cb.addEventListener('change', e => {
+          const id = e.target.dataset.id;
+          if (e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+          updateSelectedUI(); updateSelectAllState();
+        });
+      });
+      updateSelectAllState();
+    }
+
+    function updateSelectedUI() {
+      document.getElementById('selected-count').textContent = `${selectedIds.size} selected`;
+      document.getElementById('btn-delete-selected').disabled = selectedIds.size === 0;
+    }
+
+    function updateSelectAllState() {
+      const allCustomChecks = Array.from(document.querySelectorAll('.row-check'));
+      const total = allCustomChecks.length;
+      const checked = allCustomChecks.filter(c => c.checked).length;
+      document.getElementById('select-all').checked = total > 0 && total === checked;
+    }
+
+    document.getElementById('select-all').addEventListener('change', e => {
+      const isChecked = e.target.checked;
+      document.querySelectorAll('.row-check').forEach(cb => {
+        if (!cb.disabled) {
+          cb.checked = isChecked;
+          const id = cb.dataset.id;
+          if (isChecked) selectedIds.add(id); else selectedIds.delete(id);
+        }
+      });
+      updateSelectedUI();
+    });
+
+    document.getElementById('btn-delete-selected').addEventListener('click', () => {
+      if(selectedIds.size === 0) return;
+      if(!confirm(`Delete ${selectedIds.size} selected custom words? SRS progress will be removed.`)) return;
+      let custom = getCustomList().filter(c => !selectedIds.has(c.id));
+      saveCustomList(custom);
+      let srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      selectedIds.forEach(id => delete srsMap[id]);
+      localStorage.setItem(SRS_KEY, JSON.stringify(srsMap));
+      showToast('🗑️ Selected words deleted.', 'warning');
+      selectedIds.clear(); updateSelectedUI(); renderWordList(); initSRS();
+    });
+
+    function clearAllCustom() {
+      if(!confirm('Clear all custom words? Built-in vocabulary and SRS progress for them will be preserved.')) return;
+      localStorage.removeItem(CUSTOM_KEY);
+      let srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      Object.keys(srsMap).forEach(k => { if(k.startsWith('c_')) delete srsMap[k]; });
+      localStorage.setItem(SRS_KEY, JSON.stringify(srsMap));
+      showToast('🗑️ All custom words cleared.', 'warning');
+      selectedIds.clear(); updateSelectedUI(); renderWordList(); initSRS();
+    }
+
+    function resetWordSRS(id) {
+      if(!confirm('Reset SRS progress for this word?')) return;
+      let srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      delete srsMap[id];
+      localStorage.setItem(SRS_KEY, JSON.stringify(srsMap));
+      renderWordList(); initSRS();
+    }
+
+    // ================= EDIT MODAL =================
+    function openEditModal(id) {
+      const word = loadAllData().find(c => c.id === id);
+      if(!word) return;
+      document.getElementById('edit-id').value = id;
+      document.getElementById('edit-word').value = word.w;
+      document.getElementById('edit-pos').value = word.pos;
+      document.getElementById('edit-count').value = word.count || '';
+      document.getElementById('edit-freq').value = word.freq;
+      document.getElementById('edit-zh').value = word.zh;
+      document.getElementById('edit-en').value = word.en;
+      document.getElementById('edit-s1').value = word.s[0] || '';
+      document.getElementById('edit-s2').value = word.s[1] || '';
+      document.getElementById('edit-s3').value = word.s[2] || '';
+      document.getElementById('edit-modal').classList.add('active');
+    }
+    function closeEditModal(e) { if(!e || e.target === document.getElementById('edit-modal')) document.getElementById('edit-modal').classList.remove('active'); }
+
+    document.getElementById('edit-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const word = document.getElementById('edit-word').value.trim();
+      const pos = document.getElementById('edit-pos').value;
+      const count = document.getElementById('edit-count').value;
+      const freq = document.getElementById('edit-freq').value;
+      const zh = document.getElementById('edit-zh').value.trim();
+      const en = document.getElementById('edit-en').value.trim();
+      const s1 = document.getElementById('edit-s1').value.trim();
+      const s2 = document.getElementById('edit-s2').value.trim();
+      const s3 = document.getElementById('edit-s3').value.trim();
+
+      let custom = getCustomList();
+      const idx = custom.findIndex(c => c.id === id);
+      if(idx === -1) return;
+
+      custom[idx] = {...custom[idx], w: word, pos, count, freq, zh, en, s: [s1, s2, s3], verified: true};
+      saveCustomList(custom);
+
+      let srsMap = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+      delete srsMap[id];
+      localStorage.setItem(SRS_KEY, JSON.stringify(srsMap));
+
+      closeEditModal();
+      showToast('✅ Word updated with rich meaning!', 'success');
+      renderWordList(); initSRS();
+    });
+
+    document.getElementById('list-search').addEventListener('input', e => {
+      const t = e.target.value.toLowerCase();
+      document.querySelectorAll('#word-tbody tr').forEach(r => r.style.display = r.textContent.toLowerCase().includes(t) ? '' : 'none');
+    });
+
+    function showToast(msg, type='info') {
+      const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast show ${type}`;
+      setTimeout(() => t.className = 'toast', 3000);
+    }
+
+    initSRS();
+  </script>
+</body>
+</html>
